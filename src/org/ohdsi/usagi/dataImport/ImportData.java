@@ -43,7 +43,9 @@ public class ImportData {
 
 	private UsagiSearchEngine	usagiSearchEngine;
 
-	public void process(ImportSettings settings) {
+	public void process(ImportSettings settings)
+    {
+        System.out.println("h1: "+settings.usagiFolder);
 		usagiSearchEngine = new UsagiSearchEngine(settings.usagiFolder);
 		List<SourceCode> sourceCodes = new ArrayList<SourceCode>();
 		for (Row row : new ReadCSVFileWithHeader(settings.sourceFile))
@@ -72,11 +74,20 @@ public class ImportData {
 
 	private void createInitialMapping(List<SourceCode> sourceCodes, ImportSettings settings) {
 		WriteCodeMappingsToFile out = new WriteCodeMappingsToFile(settings.mappingFile);
-		for (SourceCode sourceCode : sourceCodes) {
+		for (SourceCode sourceCode : sourceCodes)
+		{
+			System.out.println("**********");
+
 			CodeMapping codeMapping = new CodeMapping(sourceCode);
 
 			List<ScoredConcept> concepts = usagiSearchEngine.search(sourceCode.sourceName, true, sourceCode.sourceAutoAssignedConceptIds,
 					settings.filterDomains, settings.filterConceptClasses, settings.filterVocabularies, settings.filterStandard, settings.includeSourceTerms);
+
+			for (ScoredConcept con: concepts)
+			{
+				System.out.println(con.term+" "+con.concept.domainId+" "+con.matchScore+" "+con.concept.vocabularyId);
+			}
+
 			if (concepts.size() > 0) {
 				codeMapping.targetConcepts.add(concepts.get(0).concept);
 				codeMapping.matchScore = concepts.get(0).matchScore;
@@ -99,7 +110,8 @@ public class ImportData {
 		/**
 		 * The root folder of Usagi. This is needed to locate the index
 		 */
-		public String usagiFolder = "/Users/svzpq/Downloads/Usagi-master/";
+		public String usagiFolder = "/Users/svzpq/Documents/Usage_index_test/";
+		public String vocabFolder = "/Users/svzpq/Documents/vocab/";
 
 		/**
 		 * The full path to the csv file containing the source code information

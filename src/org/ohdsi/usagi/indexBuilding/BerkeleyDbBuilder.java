@@ -60,6 +60,7 @@ public class BerkeleyDbBuilder {
 	}
 
 	private void loadRelationships(String conceptRelationshipFileName) {
+		if (buildThread!=null)
 		buildThread.report("Loading relationship information");
 		int count = 0;
 		for (Row row : new ReadAthenaFile(conceptRelationshipFileName)) {
@@ -83,8 +84,10 @@ public class BerkeleyDbBuilder {
 
 	private void loadAncestors(String conceptAncestorFileName) {
 		File file = new File(conceptAncestorFileName);
-		if (file.exists()) {
-			buildThread.report("Loading parent-child information");
+		if (file.exists())
+		{
+			if (buildThread!=null)
+				buildThread.report("Loading parent-child information");
 			int count = 0;
 			for (Row row : new ReadAthenaFile(conceptAncestorFileName)) {
 				if (row.get("min_levels_of_separation").equals("1") && !row.get("ancestor_concept_id").equals(row.get("descendant_concept_id"))
@@ -102,10 +105,13 @@ public class BerkeleyDbBuilder {
 	private void loadConcepts(String conceptFileName, String loincFileName) {
 		Map<String, String> loincToInfo = null;
 		if (loincFileName != null) {
-			buildThread.report("Loading LOINC additional information");
+
+			if (buildThread!=null)
+				buildThread.report("Loading LOINC additional information");
 			loincToInfo = loadLoincInfo(loincFileName);
 		}
-		buildThread.report("Loading concept information");
+		if (buildThread!=null)
+			buildThread.report("Loading concept information");
 		int count = 0;
 		for (Row row : new ReadAthenaFile(conceptFileName)) {
 			Concept concept = new Concept(row);

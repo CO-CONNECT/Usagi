@@ -128,6 +128,7 @@ public class UsagiSearchEngine {
 	}
 
 	public boolean mainIndexExists() {
+		System.out.println("folder is x: "+folder);
 		return new File(folder + "/" + MAIN_INDEX_FOLDER).exists();
 	}
 

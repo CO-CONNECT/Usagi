@@ -38,7 +38,8 @@ import com.sleepycat.persist.EntityCursor;
 public class LuceneIndexBuilder {
 
 	public void buildIndex(String vocabFolder, String loincFile, BuildThread buildThread) {
-		buildThread.report("Adding concepts to search index");
+		if (buildThread!=null)
+			buildThread.report("Adding concepts to search index");
 		UsagiSearchEngine usagiSearchEngine = new UsagiSearchEngine(Global.folder);
 		usagiSearchEngine.createNewMainIndex();
 		Set<String> vocabularies = new HashSet<String>();
@@ -69,7 +70,8 @@ public class LuceneIndexBuilder {
 			if (count % 100000 == 0)
 				System.out.println("Processed " + count + " concepts");
 		}
-		buildThread.report("Adding synonyms to search index");
+		if (buildThread!=null)
+			buildThread.report("Adding synonyms to search index");
 		count = 0;
 		for (Row row : new ReadAthenaFile(vocabFolder + "/CONCEPT_SYNONYM.csv")) {
 			Concept concept = dbEngine.getConcept(row.getInt("concept_id"));
