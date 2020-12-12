@@ -3,6 +3,10 @@ package org.ohdsi.usagi;
 import java.io.File;
 
 import org.ohdsi.usagi.dataImport.ImportData;
+import org.ohdsi.usagi.indexBuilding.BerkeleyDbBuilder;
+import org.ohdsi.usagi.indexBuilding.IndexBuildCoordinator;
+import org.ohdsi.usagi.indexBuilding.LuceneIndexBuilder;
+import org.ohdsi.usagi.indexBuilding.VocabVersionGrabber;
 import org.ohdsi.usagi.ui.Global;
 import org.ohdsi.usagi.ui.UsagiMain;
 
@@ -11,17 +15,36 @@ public class Launcher {
 
 	public static void main(String[] args) throws Exception {
 
-		if (args.length>1 && args[0].equals("command"))
+		ImportData importData = new ImportData();
+		ImportData.ImportSettings t = new ImportData.ImportSettings();
+
+
+		if (args.length>0 && args[0].equals("build"))
 		{
-			Global.commandLineinitiate();
-			ImportData importData = new ImportData();
-			ImportData.ImportSettings t = new ImportData.ImportSettings();
+
+			System.out.println("gg");
+
+			Global.commandLineinitiate(t, true);
+
+			String vocabFolder = t.vocabFolder;
+			VocabVersionGrabber vocabVersionGrabber = new VocabVersionGrabber();
+			vocabVersionGrabber.grabVersion(vocabFolder);
+
+			BerkeleyDbBuilder berkeleyDbBuilder = new BerkeleyDbBuilder();
+			berkeleyDbBuilder.buildIndex(vocabFolder, null, null);
+
+			LuceneIndexBuilder luceneIndexBuilder = new LuceneIndexBuilder();
+			luceneIndexBuilder.buildIndex(vocabFolder, null, null);
+		}
+		if (args.length>0 && args[0].equals("run"))
+		{
+			Global.commandLineinitiate(t, false);
 
 			importData.process(t);
 		}
+
 		else
 		{
-
 
 			float heapSizeMegs = (Runtime.getRuntime().maxMemory() / 1024) / 1024;
 
