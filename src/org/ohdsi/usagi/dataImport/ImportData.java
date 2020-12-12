@@ -99,64 +99,64 @@ public class ImportData {
 		/**
 		 * The root folder of Usagi. This is needed to locate the index
 		 */
-		public String		usagiFolder				= "s:/data/Usagi";
+		public String usagiFolder = "/Users/svzpq/Downloads/Usagi-master/";
 
 		/**
 		 * The full path to the csv file containing the source code information
 		 */
-		public String		sourceFile				= "";
+		public String sourceFile = "/Users/svzpq/The University of Nottingham/TDCC - ATLAS - ATLAS/ALSPAC/Data Mapping/ALSPAC small copy.csv";
 
 		/**
 		 * The full path to where the output csv file will be written
 		 */
-		public String		mappingFile				= "";
+		public String mappingFile = "/Users/svzpq/Downloads/Usagi-master/output.csv";
 
 		/**
 		 * The domain to which the search should be restricted. Set to null if not restricting by domain
 		 */
-		public Vector<String>		filterDomains			= null;
+		public Vector<String> filterDomains = null;
 
 		/**
 		 * The concept class to which the search should be restricted. Set to null if not restricting by concept class
 		 */
-		public Vector<String>		filterConceptClasses		= null;
+		public Vector<String> filterConceptClasses = null;
 
 		/**
 		 * The vocabulary to which the search should be restricted. Set to null if not restricting by vocabulary
 		 */
-		public Vector<String>		filterVocabularies		= null;
+		public Vector<String> filterVocabularies = null;
 
 		/**
 		 * Specify whether the search should be restricted to standard concepts only. If not, classification concepts will
 		 * also be allowed.
 		 */
-		public boolean		filterStandard			= true;
+		public boolean filterStandard = true;
 
 		/**
 		 * The name of the column containing the source codes
 		 */
-		public String		sourceCodeColumn;
+		public String sourceCodeColumn = "value code";
 
 		/**
 		 * The name of the column containing the source code names / descriptions
 		 */
-		public String		sourceNameColumn;
+		public String sourceNameColumn = "value text";
 
 		/**
 		 * The name of the column containing the source code frequency
 		 */
-		public String		sourceFrequencyColumn;
+		public String sourceFrequencyColumn;
 
 		/**
 		 * The name of the column containing the automatically assigned concept IDs
 		 */
-		public String		autoConceptIdsColumn;
+		public String autoConceptIdsColumn;
 
 		/**
 		 * The names of the columns containing additional information about the source codes that should be displayed in Usagi
 		 */
-		public List<String>	additionalInfoColumns	= new ArrayList<String>();
-		
+		public List<String> additionalInfoColumns = new ArrayList<String>();
+
 		/**
 		 * Include names of source concepts that map to standard concepts in the search?
 		 */

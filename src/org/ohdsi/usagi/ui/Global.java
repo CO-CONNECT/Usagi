@@ -20,7 +20,9 @@ import javax.swing.JFrame;
 import org.ohdsi.usagi.BerkeleyDbEngine;
 import org.ohdsi.usagi.UsagiSearchEngine;
 import org.ohdsi.usagi.ui.actions.*;
+import org.ohdsi.utilities.files.ReadTextFile;
 
+import java.io.File;
 import java.util.Vector;
 
 public class Global {
@@ -57,4 +59,44 @@ public class Global {
 	public static Vector<String> 					vocabularyIds;
 	public static Vector<String>	 				domainIds;
 	public static ShowStatsAction					showStatsAction;
+
+	public static void commandLineinitiate()
+	{
+
+		Global.folder = folder;
+		Global.usagiSearchEngine = new UsagiSearchEngine(Global.folder);
+		Global.dbEngine = new BerkeleyDbEngine(Global.folder);
+		if (Global.usagiSearchEngine.mainIndexExists()) {
+			Global.usagiSearchEngine.openIndexForSearching(false);
+			Global.dbEngine.openForReading();
+		}
+		Global.vocabularyVersion = loadVocabularyVersion(Global.folder);
+		Global.conceptClassIds = loadVectorFromFile(Global.folder + "/ConceptClassIds.txt");
+		Global.vocabularyIds = loadVectorFromFile(Global.folder + "/VocabularyIds.txt");
+		Global.domainIds = loadVectorFromFile(Global.folder + "/DomainIds.txt");
+
+
+
+	}
+	public static String loadVocabularyVersion(String folder) {
+		String versionFileName = folder + "/vocabularyVersion.txt";
+		String version = "Unknown";
+		if (new File(versionFileName).exists()) {
+			for (String line : new ReadTextFile(versionFileName))
+				version = line;
+		}
+		return version;
+	}
+	public static Vector<String> loadVectorFromFile(String fileName)
+	{
+		if (new File(fileName).exists())
+		{
+			Vector<String> vector = new Vector<>();
+			for (String line : new ReadTextFile(fileName))
+				vector.add(line);
+			return vector;
+		}
+		else
+			return new Vector<>();
+	}
 }
