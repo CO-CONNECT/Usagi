@@ -63,12 +63,17 @@ Ready for use.
 Running from Command line
 ================
 <b>Properties file</b> <br/>
-usagiFolder=[location of index] <br/>
-vocabFolder=[location of vocab files] <br/>
-sourceFile=[location of file to map] <br/>
-sourceCodeColumn=[name of the column within sourceFile that contains the code of the field to be mapped]<br/>
-sourceNameColumn=[name of the column that contains the text to be mapped]<br/>
-mappingFile=[location to write output] <br/>
+usagiFolder = [location of index] <br/>
+vocabFolder = [location of vocab files] <br/>
+sourceFile = [location of file to map] <br/>
+sourceCodeColumn = [name of the column within sourceFile that contains the code of the field to be mapped]<br/>
+sourceNameColumn = [name of the column that contains the text to be mapped]<br/>
+mappingFile = [location to write output]. This will be the highest ranked concept only for each row in the supplied CSV<br/>
+
+Optional: <br/>
+filterDomains = [comma separated list of domains]
+filterConceptClasses = [comma separated list of concepts]
+filterVocabularies = [comma separated list of vocabs]
 
 <b>To build the index </b> <br/>
 Run the jar with parameter build followed by the properties file location

@@ -1,7 +1,9 @@
 package org.ohdsi.usagi;
 
 import java.io.*;
+import java.util.Collections;
 import java.util.Properties;
+import java.util.Vector;
 
 import org.ohdsi.usagi.dataImport.ImportData;
 import org.ohdsi.usagi.indexBuilding.BerkeleyDbBuilder;
@@ -80,6 +82,22 @@ public class Launcher {
 		settings.mappingFile = prop.getProperty("mappingFile");
 		settings.sourceCodeColumn = prop.getProperty("sourceCodeColumn");
 		settings.sourceNameColumn = prop.getProperty("sourceNameColumn");
+
+		if (prop.getProperty("filterDomains")!=null)
+		{
+			settings.filterDomains = new Vector<>();
+			Collections.addAll(settings.filterDomains, prop.getProperty("filterDomains").split(","));
+		}
+		if (prop.getProperty("filterConceptClasses")!=null)
+		{
+			settings.filterConceptClasses = new Vector<>();
+			Collections.addAll(settings.filterConceptClasses, prop.getProperty("filterConceptClasses").split(","));
+		}
+		if (prop.getProperty("filterVocabularies")!=null)
+		{
+			settings.filterVocabularies = new Vector<>();
+			Collections.addAll(settings.filterVocabularies, prop.getProperty("filterVocabularies").split(","));
+		}
 
 	}
 }

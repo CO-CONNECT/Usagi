@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2019 Observational Health Data Sciences and Informatics
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,147 +32,163 @@ import org.ohdsi.utilities.files.Row;
 
 /**
  * Use this class to programmatically import data into the Usagi format
- * 
+ *
  * @author MSCHUEMI
- * 
  */
-public class ImportData {
+public class ImportData
+{
 
-	public static String		SOURCE_CODE_TYPE_STRING	= "S";
-	public static String		CONCEPT_TYPE_STRING		= "C";
+    public static String SOURCE_CODE_TYPE_STRING = "S";
+    public static String CONCEPT_TYPE_STRING = "C";
 
-	private UsagiSearchEngine	usagiSearchEngine;
+    private UsagiSearchEngine usagiSearchEngine;
 
-	public void process(ImportSettings settings)
+    public void process(ImportSettings settings)
     {
-        System.out.println("h1: "+settings.usagiFolder);
-		usagiSearchEngine = new UsagiSearchEngine(settings.usagiFolder);
-		List<SourceCode> sourceCodes = new ArrayList<SourceCode>();
-		for (Row row : new ReadCSVFileWithHeader(settings.sourceFile))
-			sourceCodes.add(convertToSourceCode(row, settings));
+        usagiSearchEngine = new UsagiSearchEngine(settings.usagiFolder);
+        List<SourceCode> sourceCodes = new ArrayList<SourceCode>();
+        for (Row row : new ReadCSVFileWithHeader(settings.sourceFile))
+            sourceCodes.add(convertToSourceCode(row, settings));
 
-		usagiSearchEngine.createDerivedIndex(sourceCodes, null);
+        usagiSearchEngine.createDerivedIndex(sourceCodes, null);
 
-		createInitialMapping(sourceCodes, settings);
+        createInitialMapping(sourceCodes, settings);
 
-	}
+    }
 
-	private SourceCode convertToSourceCode(Row row, ImportSettings settings) {
-		SourceCode sourceCode = new SourceCode();
-		sourceCode.sourceCode = row.get(settings.sourceCodeColumn);
-		sourceCode.sourceName = row.get(settings.sourceNameColumn);
-		if (settings.sourceFrequencyColumn != null)
-			sourceCode.sourceFrequency = row.getInt(settings.sourceFrequencyColumn);
-		if (settings.autoConceptIdsColumn != null)
-			if (!row.get(settings.autoConceptIdsColumn).equals(""))
-				for (String conceptId : row.get(settings.autoConceptIdsColumn).split(";"))
-					sourceCode.sourceAutoAssignedConceptIds.add(Integer.parseInt(conceptId));
-		for (String additionalInfoColumn : settings.additionalInfoColumns)
-			sourceCode.sourceAdditionalInfo.add(new Pair<String, String>(additionalInfoColumn, row.get(additionalInfoColumn)));
-		return sourceCode;
-	}
+    private SourceCode convertToSourceCode(Row row, ImportSettings settings)
+    {
+        SourceCode sourceCode = new SourceCode();
+        sourceCode.sourceCode = row.get(settings.sourceCodeColumn);
+        sourceCode.sourceName = row.get(settings.sourceNameColumn);
 
-	private void createInitialMapping(List<SourceCode> sourceCodes, ImportSettings settings) {
-		WriteCodeMappingsToFile out = new WriteCodeMappingsToFile(settings.mappingFile);
-		for (SourceCode sourceCode : sourceCodes)
-		{
-			System.out.println("**********");
+        if (settings.sourceFrequencyColumn != null)
+            sourceCode.sourceFrequency = row.getInt(settings.sourceFrequencyColumn);
 
-			CodeMapping codeMapping = new CodeMapping(sourceCode);
+        if (settings.autoConceptIdsColumn != null)
+        {
+            if (!row.get(settings.autoConceptIdsColumn).equals(""))
+            {
+                for (String conceptId : row.get(settings.autoConceptIdsColumn).split(";"))
+                    sourceCode.sourceAutoAssignedConceptIds.add(Integer.parseInt(conceptId));
+            }
+        }
+        for (String additionalInfoColumn : settings.additionalInfoColumns)
+            sourceCode.sourceAdditionalInfo.add(new Pair<String, String>(additionalInfoColumn, row.get(additionalInfoColumn)));
 
-			List<ScoredConcept> concepts = usagiSearchEngine.search(sourceCode.sourceName, true, sourceCode.sourceAutoAssignedConceptIds,
-					settings.filterDomains, settings.filterConceptClasses, settings.filterVocabularies, settings.filterStandard, settings.includeSourceTerms);
+        return sourceCode;
+    }
 
-			for (ScoredConcept con: concepts)
-			{
-				System.out.println(con.term+" "+con.concept.domainId+" "+con.matchScore+" "+con.concept.vocabularyId);
-			}
+    private void createInitialMapping(List<SourceCode> sourceCodes, ImportSettings settings)
+    {
+        WriteCodeMappingsToFile out = new WriteCodeMappingsToFile(settings.mappingFile);
 
-			if (concepts.size() > 0) {
-				codeMapping.targetConcepts.add(concepts.get(0).concept);
-				codeMapping.matchScore = concepts.get(0).matchScore;
-			} else {
-				codeMapping.targetConcepts.add(Concept.EMPTY_CONCEPT);
-				codeMapping.matchScore = 0;
-			}
-			codeMapping.mappingStatus = MappingStatus.UNCHECKED;
-			if (sourceCode.sourceAutoAssignedConceptIds.size() == 1 && concepts.size() > 0) {
-				codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED_TO_1;
-			} else if (sourceCode.sourceAutoAssignedConceptIds.size() > 1 && concepts.size() > 0) {
-				codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED;
-			}
-			out.write(codeMapping);
-		}
-		out.close();
-	}
+        for (SourceCode sourceCode : sourceCodes)
+        {
 
-	public static class ImportSettings {
-		/**
-		 * The root folder of Usagi. This is needed to locate the index
-		 */
-		public String usagiFolder = "/Users/svzpq/Documents/Usage_index_test/";
-		public String vocabFolder = "/Users/svzpq/Documents/vocab/";
+            CodeMapping codeMapping = new CodeMapping(sourceCode);
 
-		/**
-		 * The full path to the csv file containing the source code information
-		 */
-		public String sourceFile = "/Users/svzpq/The University of Nottingham/TDCC - ATLAS - ATLAS/ALSPAC/Data Mapping/ALSPAC small copy.csv";
+            List<ScoredConcept> concepts = usagiSearchEngine.search(sourceCode.sourceName, true, sourceCode.sourceAutoAssignedConceptIds,
+                    settings.filterDomains, settings.filterConceptClasses, settings.filterVocabularies, settings.filterStandard, settings.includeSourceTerms);
 
-		/**
-		 * The full path to where the output csv file will be written
-		 */
-		public String mappingFile = "/Users/svzpq/Downloads/Usagi-master/output.csv";
+            if (concepts.size() > 0)
+            {
+                codeMapping.targetConcepts.add(concepts.get(0).concept);
+                codeMapping.matchScore = concepts.get(0).matchScore;
+            }
+            else
+            {
+                codeMapping.targetConcepts.add(Concept.EMPTY_CONCEPT);
+                codeMapping.matchScore = 0;
+            }
 
-		/**
-		 * The domain to which the search should be restricted. Set to null if not restricting by domain
-		 */
-		public Vector<String> filterDomains = null;
+            codeMapping.mappingStatus = MappingStatus.UNCHECKED;
 
-		/**
-		 * The concept class to which the search should be restricted. Set to null if not restricting by concept class
-		 */
-		public Vector<String> filterConceptClasses = null;
+            if (sourceCode.sourceAutoAssignedConceptIds.size() == 1 && concepts.size() > 0)
+            {
+                codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED_TO_1;
+            }
+            else if (sourceCode.sourceAutoAssignedConceptIds.size() > 1 && concepts.size() > 0)
+            {
+                codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED;
+            }
+            out.write(codeMapping);
+        }
+        out.close();
+    }
 
-		/**
-		 * The vocabulary to which the search should be restricted. Set to null if not restricting by vocabulary
-		 */
-		public Vector<String> filterVocabularies = null;
+    public static class ImportSettings
+    {
+        /**
+         * The root folder of Usagi. This is needed to locate the index
+         */
+        public String usagiFolder = "";
 
-		/**
-		 * Specify whether the search should be restricted to standard concepts only. If not, classification concepts will
-		 * also be allowed.
-		 */
-		public boolean filterStandard = true;
+        /**
+         * The root folder for the vocabulary
+         */
+        public String vocabFolder = "";
 
-		/**
-		 * The name of the column containing the source codes
-		 */
-		public String sourceCodeColumn = "";
+        /**
+         * The full path to the csv file containing the source code information
+         */
+        public String sourceFile = "/Users/svzpq/The University of Nottingham/TDCC - ATLAS - ATLAS/ALSPAC/Data Mapping/ALSPAC small copy.csv";
 
-		/**
-		 * The name of the column containing the source code names / descriptions
-		 */
-		public String sourceNameColumn = "";
+        /**
+         * The full path to where the output csv file will be written
+         */
+        public String mappingFile = "/Users/svzpq/Downloads/Usagi-master/output.csv";
 
-		/**
-		 * The name of the column containing the source code frequency
-		 */
-		public String sourceFrequencyColumn;
+        /**
+         * The domain to which the search should be restricted. Set to null if not restricting by domain
+         */
+        public Vector<String> filterDomains = null;
 
-		/**
-		 * The name of the column containing the automatically assigned concept IDs
-		 */
-		public String autoConceptIdsColumn;
+        /**
+         * The concept class to which the search should be restricted. Set to null if not restricting by concept class
+         */
+        public Vector<String> filterConceptClasses = null;
 
-		/**
-		 * The names of the columns containing additional information about the source codes that should be displayed in Usagi
-		 */
-		public List<String> additionalInfoColumns = new ArrayList<String>();
+        /**
+         * The vocabulary to which the search should be restricted. Set to null if not restricting by vocabulary
+         */
+        public Vector<String> filterVocabularies = null;
 
-		/**
-		 * Include names of source concepts that map to standard concepts in the search?
-		 */
-		public boolean includeSourceTerms = true;
-	}
+        /**
+         * Specify whether the search should be restricted to standard concepts only. If not, classification concepts will
+         * also be allowed.
+         */
+        public boolean filterStandard = true;
+
+        /**
+         * The name of the column containing the source codes
+         */
+        public String sourceCodeColumn = "";
+
+        /**
+         * The name of the column containing the source code names / descriptions
+         */
+        public String sourceNameColumn = "";
+
+        /**
+         * The name of the column containing the source code frequency
+         */
+        public String sourceFrequencyColumn;
+
+        /**
+         * The name of the column containing the automatically assigned concept IDs
+         */
+        public String autoConceptIdsColumn;
+
+        /**
+         * The names of the columns containing additional information about the source codes that should be displayed in Usagi
+         */
+        public List<String> additionalInfoColumns = new ArrayList<String>();
+
+        /**
+         * Include names of source concepts that map to standard concepts in the search?
+         */
+        public boolean includeSourceTerms = true;
+    }
 
 }
