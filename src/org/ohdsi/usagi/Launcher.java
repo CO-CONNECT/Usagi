@@ -25,7 +25,9 @@ public class Launcher {
 		if (args.length>0 && args[0].equals("build"))
 		{
 
-			Global.commandLineinitiate(importSettings, true);
+            setProperties(args[1], importSettings);
+
+            Global.commandLineinitiate(importSettings, true);
 
 			String vocabFolder = importSettings.vocabFolder;
 			VocabVersionGrabber vocabVersionGrabber = new VocabVersionGrabber();
@@ -37,7 +39,7 @@ public class Launcher {
 			LuceneIndexBuilder luceneIndexBuilder = new LuceneIndexBuilder();
 			luceneIndexBuilder.buildIndex(vocabFolder, null, null);
 		}
-		if (args.length>0 && args[0].equals("run"))
+		else if (args.length>0 && args[0].equals("run"))
 		{
 			setProperties(args[1], importSettings);
 			Global.commandLineinitiate(importSettings, false);
