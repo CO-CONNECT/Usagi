@@ -1,6 +1,7 @@
 package org.ohdsi.usagi;
 
-import java.io.File;
+import java.io.*;
+import java.util.Properties;
 
 import org.ohdsi.usagi.dataImport.ImportData;
 import org.ohdsi.usagi.indexBuilding.BerkeleyDbBuilder;
@@ -16,17 +17,15 @@ public class Launcher {
 	public static void main(String[] args) throws Exception {
 
 		ImportData importData = new ImportData();
-		ImportData.ImportSettings t = new ImportData.ImportSettings();
+		ImportData.ImportSettings importSettings = new ImportData.ImportSettings();
 
 
 		if (args.length>0 && args[0].equals("build"))
 		{
 
-			System.out.println("gg");
+			Global.commandLineinitiate(importSettings, true);
 
-			Global.commandLineinitiate(t, true);
-
-			String vocabFolder = t.vocabFolder;
+			String vocabFolder = importSettings.vocabFolder;
 			VocabVersionGrabber vocabVersionGrabber = new VocabVersionGrabber();
 			vocabVersionGrabber.grabVersion(vocabFolder);
 
@@ -38,9 +37,10 @@ public class Launcher {
 		}
 		if (args.length>0 && args[0].equals("run"))
 		{
-			Global.commandLineinitiate(t, false);
+			setProperties(args[1], importSettings);
+			Global.commandLineinitiate(importSettings, false);
 
-			importData.process(t);
+			importData.process(importSettings);
 		}
 
 		else
@@ -62,5 +62,24 @@ public class Launcher {
 				pb.start();
 			}
 		}
+
+
+	}
+	private static void  setProperties(String filename, ImportData.ImportSettings settings) throws IOException
+	{
+		InputStream input = new FileInputStream(filename);
+
+		Properties prop = new Properties();
+
+		// load a properties file
+		prop.load(input);
+
+		settings.usagiFolder = prop.getProperty("usagiFolder");
+		settings.vocabFolder = prop.getProperty("vocabFolder");
+		settings.sourceFile = prop.getProperty("sourceFile");
+		settings.mappingFile = prop.getProperty("mappingFile");
+		settings.sourceCodeColumn = prop.getProperty("sourceCodeColumn");
+		settings.sourceNameColumn = prop.getProperty("sourceNameColumn");
+
 	}
 }

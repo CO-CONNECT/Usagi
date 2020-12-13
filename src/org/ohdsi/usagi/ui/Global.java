@@ -72,6 +72,7 @@ public class Global
         Global.mapping = new Mapping();
 
         Global.folder = settings.usagiFolder;
+        System.out.println(Global.folder);
         Global.usagiSearchEngine = new UsagiSearchEngine(Global.folder);
         Global.dbEngine = new BerkeleyDbEngine(Global.folder);
 

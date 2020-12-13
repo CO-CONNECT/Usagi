@@ -147,12 +147,12 @@ public class ImportData {
 		/**
 		 * The name of the column containing the source codes
 		 */
-		public String sourceCodeColumn = "value code";
+		public String sourceCodeColumn = "";
 
 		/**
 		 * The name of the column containing the source code names / descriptions
 		 */
-		public String sourceNameColumn = "value text";
+		public String sourceNameColumn = "";
 
 		/**
 		 * The name of the column containing the source code frequency

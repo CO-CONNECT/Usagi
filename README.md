@@ -60,6 +60,23 @@ Usagi is being developed in Eclipse. Contributions are welcome.
 ### Development status
 Ready for use.
 
+Running from Command line
+================
+<b>Properties file</b> <br/>
+usagiFolder=[location of index] <br/>
+vocabFolder=[location of vocab files] <br/>
+sourceFile=[location of file to map] <br/>
+sourceCodeColumn=[name of the column within sourceFile that contains the code of the field to be mapped]<br/>
+sourceNameColumn=[name of the column that contains the text to be mapped]<br/>
+mappingFile=[location to write output] <br/>
+
+<b>To build the index </b> <br/>
+Run the jar with parameter build followed by the properties file location
+
+<b>To run the mapping</b> <br/>
+Run the jar with parameter run followed by the properties file location
+
+
 Acknowledgements
 ================
 Martijn Schuemie is the author of this application.
