@@ -84,6 +84,7 @@ public class Launcher {
 		settings.mappingFile = prop.getProperty("mappingFile");
 		settings.sourceCodeColumn = prop.getProperty("sourceCodeColumn");
 		settings.sourceNameColumn = prop.getProperty("sourceNameColumn");
+		settings.threshold = Double.parseDouble(prop.getProperty("threshold"));
 
 		if (prop.getProperty("filterDomains")!=null)
 		{

@@ -112,7 +112,8 @@ public class ImportData
             {
                 codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED;
             }
-            out.write(codeMapping);
+            if (codeMapping.matchScore>=settings.threshold)
+                out.write(codeMapping);
         }
         out.close();
     }
@@ -189,6 +190,11 @@ public class ImportData
          * Include names of source concepts that map to standard concepts in the search?
          */
         public boolean includeSourceTerms = true;
+
+        /**
+         * Threshold to accept a result
+         */
+        public double threshold = 0.7;
     }
 
 }
