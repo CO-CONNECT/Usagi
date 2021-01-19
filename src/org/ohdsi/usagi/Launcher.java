@@ -1,6 +1,7 @@
 package org.ohdsi.usagi;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.Vector;
@@ -84,6 +85,8 @@ public class Launcher {
 		settings.mappingFile = prop.getProperty("mappingFile");
 		settings.sourceCodeColumn = prop.getProperty("sourceCodeColumn");
 		settings.sourceNameColumn = prop.getProperty("sourceNameColumn");
+		settings.fieldID = prop.getProperty("sourceFieldCode");
+		settings.fieldDesc = prop.getProperty("sourceFieldDescription");
 
 		if (prop.getProperty("threshold")!=null)
 			settings.threshold = Double.parseDouble(prop.getProperty("threshold"));
@@ -92,6 +95,16 @@ public class Launcher {
 		{
 			settings.filterDomains = new Vector<>();
 			Collections.addAll(settings.filterDomains, prop.getProperty("filterDomains").split(","));
+		}
+		if (prop.getProperty("positiveAnswer")!=null)
+		{
+			settings.posTerms = new ArrayList<String>();
+			Collections.addAll(settings.posTerms, prop.getProperty("positiveAnswer").split(","));
+		}
+		if (prop.getProperty("negativeAnswer")!=null)
+		{
+			settings.negTerms = new ArrayList<String>();
+			Collections.addAll(settings.negTerms, prop.getProperty("negativeAnswer").split(","));
 		}
 		if (prop.getProperty("filterConceptClasses")!=null)
 		{
@@ -102,6 +115,11 @@ public class Launcher {
 		{
 			settings.filterVocabularies = new Vector<>();
 			Collections.addAll(settings.filterVocabularies, prop.getProperty("filterVocabularies").split(","));
+		}
+		if (prop.getProperty("additionalInfoColumns")!=null)
+		{
+			settings.additionalInfoColumns = new ArrayList<String>();
+			Collections.addAll(settings.additionalInfoColumns, prop.getProperty("additionalInfoColumns").split(","));
 		}
 
 	}
