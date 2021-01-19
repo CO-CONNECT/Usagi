@@ -15,10 +15,12 @@
  ******************************************************************************/
 package org.ohdsi.usagi.dataImport;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Vector;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.xmlbeans.impl.xb.ltgfmt.Code;
 import org.ohdsi.usagi.CodeMapping;
 import org.ohdsi.usagi.CodeMapping.MappingStatus;
 import org.ohdsi.usagi.SourceCode;
@@ -26,6 +28,7 @@ import org.ohdsi.usagi.Concept;
 import org.ohdsi.usagi.UsagiSearchEngine;
 import org.ohdsi.usagi.UsagiSearchEngine.ScoredConcept;
 import org.ohdsi.usagi.WriteCodeMappingsToFile;
+import org.ohdsi.usagi.ui.Global;
 import org.ohdsi.utilities.collections.Pair;
 import org.ohdsi.utilities.files.ReadCSVFileWithHeader;
 import org.ohdsi.utilities.files.Row;
@@ -43,16 +46,17 @@ public class ImportData
 
     private UsagiSearchEngine usagiSearchEngine;
 
-    public void process(ImportSettings settings)
+    public void process(ImportSettings settings) throws ExecutionException, InterruptedException
     {
         usagiSearchEngine = new UsagiSearchEngine(settings.usagiFolder);
         List<SourceCode> sourceCodes = new ArrayList<SourceCode>();
+
         for (Row row : new ReadCSVFileWithHeader(settings.sourceFile))
             sourceCodes.add(convertToSourceCode(row, settings));
 
         usagiSearchEngine.createDerivedIndex(sourceCodes, null);
 
-        createInitialMapping(sourceCodes, settings);
+        createInitialMappingThreads(sourceCodes, settings);
 
     }
 
@@ -61,6 +65,8 @@ public class ImportData
         SourceCode sourceCode = new SourceCode();
         sourceCode.sourceCode = row.get(settings.sourceCodeColumn);
         sourceCode.sourceName = row.get(settings.sourceNameColumn);
+        sourceCode.fieldID = row.get(settings.fieldID);
+        sourceCode.fieldDescription = row.get(settings.fieldDesc);
 
         if (settings.sourceFrequencyColumn != null)
             sourceCode.sourceFrequency = row.getInt(settings.sourceFrequencyColumn);
@@ -86,38 +92,164 @@ public class ImportData
         for (SourceCode sourceCode : sourceCodes)
         {
 
-            CodeMapping codeMapping = new CodeMapping(sourceCode);
-
-            List<ScoredConcept> concepts = usagiSearchEngine.search(sourceCode.sourceName, true, sourceCode.sourceAutoAssignedConceptIds,
-                    settings.filterDomains, settings.filterConceptClasses, settings.filterVocabularies, settings.filterStandard, settings.includeSourceTerms);
-
-            if (concepts.size() > 0)
+            if (StringUtils.isAlphanumeric(sourceCode.sourceName))
             {
-                codeMapping.targetConcepts.add(concepts.get(0).concept);
-                codeMapping.matchScore = concepts.get(0).matchScore;
-            }
-            else
-            {
-                codeMapping.targetConcepts.add(Concept.EMPTY_CONCEPT);
-                codeMapping.matchScore = 0;
-            }
 
-            codeMapping.mappingStatus = MappingStatus.UNCHECKED;
+                CodeMapping codeMapping = new CodeMapping(sourceCode);
 
-            if (sourceCode.sourceAutoAssignedConceptIds.size() == 1 && concepts.size() > 0)
-            {
-                codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED_TO_1;
+                List<ScoredConcept> concepts = usagiSearchEngine.search(sourceCode.sourceName, true, sourceCode.sourceAutoAssignedConceptIds,
+                        settings.filterDomains, settings.filterConceptClasses, settings.filterVocabularies, settings.filterStandard, settings.includeSourceTerms);
+
+                if (concepts.size() > 0)
+                {
+                    codeMapping.targetConcepts.add(concepts.get(0).concept);
+                    codeMapping.matchScore = concepts.get(0).matchScore;
+                }
+                else
+                {
+                    codeMapping.targetConcepts.add(Concept.EMPTY_CONCEPT);
+                    codeMapping.matchScore = 0;
+                }
+
+                codeMapping.mappingStatus = MappingStatus.UNCHECKED;
+
+                if (sourceCode.sourceAutoAssignedConceptIds.size() == 1 && concepts.size() > 0)
+                {
+                    codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED_TO_1;
+                }
+                else if (sourceCode.sourceAutoAssignedConceptIds.size() > 1 && concepts.size() > 0)
+                {
+                    codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED;
+                }
+                if (codeMapping.matchScore >= settings.threshold)
+                    out.write(codeMapping);
             }
-            else if (sourceCode.sourceAutoAssignedConceptIds.size() > 1 && concepts.size() > 0)
-            {
-                codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED;
-            }
-            if (codeMapping.matchScore>=settings.threshold)
-                out.write(codeMapping);
         }
         out.close();
     }
 
+    private void createInitialMappingThreads(List<SourceCode> sourceCodes, ImportSettings settings) throws ExecutionException, InterruptedException
+    {
+        WriteCodeMappingsToFile out = new WriteCodeMappingsToFile(settings.mappingFile);
+
+        List<CodeMapping> globalMappingList = Collections.synchronizedList(Global.mapping);
+
+        int threadCount = Runtime.getRuntime().availableProcessors();
+//        int threadCount = 1;
+
+        if (threadCount <= 0)
+            threadCount = 1;
+
+        // Note: Lucene's and BerkeleyDB's search objects are thread safe, so do not need to be recreated for each thread.
+        ForkJoinPool forkJoinPool = new ForkJoinPool(threadCount);
+        forkJoinPool.submit(() -> sourceCodes.parallelStream().forEach(sourceCode -> {
+
+
+
+
+            try
+            {
+                String textToMap = sourceCode.sourceName;
+
+                SourceCode fieldMap = new SourceCode();
+                SourceCode intelMap = new SourceCode();
+                copySoureCode(sourceCode, fieldMap);
+                copySoureCode(sourceCode, intelMap);
+
+                /**
+                 * Decision making flags.
+                 * positiveStatement: establishes is the value is a known positive statement (such as Yes)
+                 * positiveStatement: establishes is the value is a known negative statement (such as No)
+                 * containsNumbers: establishes if the value is a numeric
+                 * allAdjs: establishes if all the text values are adjectives (Strong, High, Low)
+                 * mapField: if any of the obove is true, then Usagi should map to the fieldDescription not the field entry content
+                 */
+                boolean positiveStatement = (settings.posTerms.contains(textToMap.toLowerCase()));
+                boolean negativeStatement = (settings.negTerms.contains(textToMap.toLowerCase()));
+                boolean containsNumbers = (StringUtils.isNumeric(textToMap) || (textToMap.startsWith("-") && StringUtils.isNumeric(textToMap.split("-")[1])));
+                boolean mapField = ( containsNumbers || positiveStatement || negativeStatement );
+
+                doMapping(fieldMap, settings, globalMappingList, fieldMap.fieldDescription);
+
+                if (!mapField)
+                {
+                    doMapping(sourceCode, settings, globalMappingList, sourceCode.sourceName);
+
+//                Set<String> nouns = check.getNoun(fieldMap.sourceName);
+//
+//                StringBuilder toUse = new StringBuilder(sourceCode.sourceName + " ");
+//
+//                for (String noun : nouns)
+//                {
+//                    toUse.append(noun).append(" ");
+//                }
+//                textToMap = toUse.toString();
+//                intelMap.setUsedCheat(true);
+//
+//                doMapping(intelMap, settings, globalMappingList, textToMap);
+                }
+
+
+            }
+            catch (Exception e)
+            {
+                System.out.println(e.toString());
+            }
+
+        })).get();
+        forkJoinPool.shutdown();
+
+        for (CodeMapping map : globalMappingList)
+        {
+            if (map.matchScore >= settings.threshold)
+                out.write(map);
+        }
+    }
+
+    public void doMapping(SourceCode sourceCode, ImportSettings settings, List<CodeMapping> globalMappingList, String textToUse)
+    {
+        CodeMapping codeMapping = new CodeMapping(sourceCode);
+
+        List<ScoredConcept> concepts = Global.usagiSearchEngine.search(textToUse, true, sourceCode.sourceAutoAssignedConceptIds,
+                settings.filterDomains, settings.filterConceptClasses, settings.filterVocabularies, settings.filterStandard, settings.includeSourceTerms);
+
+        if (concepts.size() > 0)
+        {
+            codeMapping.targetConcepts.add(concepts.get(0).concept);
+            codeMapping.matchScore = concepts.get(0).matchScore;
+        }
+        else
+        {
+            codeMapping.matchScore = 0;
+        }
+        codeMapping.comment = "";
+        codeMapping.mappingStatus = MappingStatus.UNCHECKED;
+
+        if (sourceCode.sourceAutoAssignedConceptIds.size() == 1 && concepts.size() > 0)
+        {
+            codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED_TO_1;
+        }
+        else if (sourceCode.sourceAutoAssignedConceptIds.size() > 1 && concepts.size() > 0)
+        {
+            codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED;
+        }
+        synchronized (globalMappingList)
+        {
+            globalMappingList.add(codeMapping);
+        }
+    }
+    public void copySoureCode(SourceCode toBeCopied, SourceCode copiedTo)
+    {
+        copiedTo.setFieldDescription(toBeCopied.getFieldDescription());
+        copiedTo.setFieldID(toBeCopied.getFieldID());
+        copiedTo.setUsedCheat(toBeCopied.isUsedCheat());
+        copiedTo.setFieldMapping(toBeCopied.isFieldMapping());
+        copiedTo.setSourceCode(toBeCopied.getSourceCode());
+        copiedTo.setSourceFrequency(toBeCopied.getSourceFrequency());
+        copiedTo.setSourceName(toBeCopied.getSourceName());
+        copiedTo.getSourceAdditionalInfo().addAll(toBeCopied.getSourceAdditionalInfo());
+
+    }
     public static class ImportSettings
     {
         /**
@@ -186,6 +318,9 @@ public class ImportData
          */
         public List<String> additionalInfoColumns = new ArrayList<String>();
 
+        public List<String> posTerms = new ArrayList<String>();
+        public List<String> negTerms = new ArrayList<String>();
+
         /**
          * Include names of source concepts that map to standard concepts in the search?
          */
@@ -195,6 +330,11 @@ public class ImportData
          * Threshold to accept a result
          */
         public double threshold = 0.7;
+
+        public String fieldID;
+
+        public String fieldDesc;
+
     }
 
 }
