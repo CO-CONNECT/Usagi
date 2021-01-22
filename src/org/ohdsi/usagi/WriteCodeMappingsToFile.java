@@ -42,8 +42,18 @@ public class WriteCodeMappingsToFile {
 			Row row = codeMapping.sourceCode.toRow();
 			row.add("matchScore", codeMapping.matchScore);
 			row.add("mappingStatus", codeMapping.mappingStatus.toString());
-			row.add("conceptId", targetConcept.conceptId);
-			row.add("comment", codeMapping.comment);
+			row.add("targetConceptId", targetConcept.conceptId);
+			row.add("targetConceptName", targetConcept.conceptName);
+			row.add("targetVocabularyId", targetConcept.vocabularyId);
+			row.add("targetDomainId", targetConcept.domainId);
+			row.add("targetStandardConcept", targetConcept.standardConcept);
+			row.add("targetChildCount", targetConcept.childCount);
+			row.add("targetParentCount", targetConcept.parentCount);
+			row.add("targetConceptClassId", targetConcept.conceptClassId);
+			row.add("targetConceptCode", targetConcept.conceptCode);
+			row.add("targetValidStartDate", targetConcept.validStartDate);
+			row.add("targetValidEndDate", targetConcept.validEndDate);
+			row.add("targetInvalidReason", targetConcept.invalidReason);
 			out.write(row);
 		}
 	}
