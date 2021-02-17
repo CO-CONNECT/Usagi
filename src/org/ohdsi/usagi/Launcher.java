@@ -1,10 +1,7 @@
 package org.ohdsi.usagi;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Properties;
-import java.util.Vector;
+import java.util.*;
 
 import org.ohdsi.usagi.dataImport.ImportData;
 import org.ohdsi.usagi.indexBuilding.BerkeleyDbBuilder;
@@ -25,7 +22,6 @@ public class Launcher {
 
 		if (args.length>0 && args[0].equals("build"))
 		{
-
             setProperties(args[1], importSettings);
 
             Global.commandLineinitiate(importSettings, true);
@@ -82,10 +78,12 @@ public class Launcher {
 		settings.usagiFolder = prop.getProperty("usagiFolder");
 		settings.vocabFolder = prop.getProperty("vocabFolder");
 		settings.sourceFile = prop.getProperty("sourceFile");
-		settings.mappingFile = prop.getProperty("mappingFile");
+		settings.outputDir = prop.getProperty("outputDir");
 		settings.sourceCodeColumn = prop.getProperty("sourceCodeColumn");
 		settings.sourceNameColumn = prop.getProperty("sourceNameColumn");
 		settings.fieldID = prop.getProperty("sourceFieldCode");
+		settings.fieldDesc = prop.getProperty("sourceFieldDescription");
+		settings.secondaryThreshold = Double.parseDouble(prop.getProperty("secondarythreshold"));
 		settings.fieldDesc = prop.getProperty("sourceFieldDescription");
 
 		if (prop.getProperty("threshold")!=null)
@@ -96,15 +94,22 @@ public class Launcher {
 			settings.filterDomains = new Vector<>();
 			Collections.addAll(settings.filterDomains, prop.getProperty("filterDomains").split(","));
 		}
+		if (prop.getProperty("empties")!=null)
+		{
+			settings.empties = new ArrayList<String>();
+
+			for (String s: prop.getProperty("empties").split(","))
+				settings.empties.add(s.toLowerCase());
+		}
 		if (prop.getProperty("positiveAnswer")!=null)
 		{
-			settings.posTerms = new ArrayList<String>();
-			Collections.addAll(settings.posTerms, prop.getProperty("positiveAnswer").split(","));
+			for (String s: prop.getProperty("positiveAnswer").split(","))
+				settings.posTerms.add(s.toLowerCase());
 		}
 		if (prop.getProperty("negativeAnswer")!=null)
 		{
-			settings.negTerms = new ArrayList<String>();
-			Collections.addAll(settings.negTerms, prop.getProperty("negativeAnswer").split(","));
+			for (String s : prop.getProperty("negativeAnswer").split(","))
+				settings.negTerms.add(s.toLowerCase());
 		}
 		if (prop.getProperty("filterConceptClasses")!=null)
 		{

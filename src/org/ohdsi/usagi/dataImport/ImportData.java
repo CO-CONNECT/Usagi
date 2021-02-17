@@ -85,57 +85,17 @@ public class ImportData
         return sourceCode;
     }
 
-    private void createInitialMapping(List<SourceCode> sourceCodes, ImportSettings settings)
-    {
-        WriteCodeMappingsToFile out = new WriteCodeMappingsToFile(settings.mappingFile);
 
-        for (SourceCode sourceCode : sourceCodes)
-        {
-
-            if (StringUtils.isAlphanumeric(sourceCode.sourceName))
-            {
-
-                CodeMapping codeMapping = new CodeMapping(sourceCode);
-
-                List<ScoredConcept> concepts = usagiSearchEngine.search(sourceCode.sourceName, true, sourceCode.sourceAutoAssignedConceptIds,
-                        settings.filterDomains, settings.filterConceptClasses, settings.filterVocabularies, settings.filterStandard, settings.includeSourceTerms);
-
-                if (concepts.size() > 0)
-                {
-                    codeMapping.targetConcepts.add(concepts.get(0).concept);
-                    codeMapping.matchScore = concepts.get(0).matchScore;
-                }
-                else
-                {
-                    codeMapping.targetConcepts.add(Concept.EMPTY_CONCEPT);
-                    codeMapping.matchScore = 0;
-                }
-
-                codeMapping.mappingStatus = MappingStatus.UNCHECKED;
-
-                if (sourceCode.sourceAutoAssignedConceptIds.size() == 1 && concepts.size() > 0)
-                {
-                    codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED_TO_1;
-                }
-                else if (sourceCode.sourceAutoAssignedConceptIds.size() > 1 && concepts.size() > 0)
-                {
-                    codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED;
-                }
-                if (codeMapping.matchScore >= settings.threshold)
-                    out.write(codeMapping);
-            }
-        }
-        out.close();
-    }
 
     private void createInitialMappingThreads(List<SourceCode> sourceCodes, ImportSettings settings) throws ExecutionException, InterruptedException
     {
-        WriteCodeMappingsToFile out = new WriteCodeMappingsToFile(settings.mappingFile);
+        WriteCodeMappingsToFile primary = new WriteCodeMappingsToFile(settings.outputDir+"/"+"main_mappings.csv");
+        WriteCodeMappingsToFile secondary = new WriteCodeMappingsToFile(settings.outputDir+"/"+"secondary_mappings.csv");
 
         List<CodeMapping> globalMappingList = Collections.synchronizedList(Global.mapping);
+        List<CodeMapping> secondaryMappingList = Collections.synchronizedList(Global.mapping);
 
         int threadCount = Runtime.getRuntime().availableProcessors();
-//        int threadCount = 1;
 
         if (threadCount <= 0)
             threadCount = 1;
@@ -143,13 +103,10 @@ public class ImportData
         // Note: Lucene's and BerkeleyDB's search objects are thread safe, so do not need to be recreated for each thread.
         ForkJoinPool forkJoinPool = new ForkJoinPool(threadCount);
         forkJoinPool.submit(() -> sourceCodes.parallelStream().forEach(sourceCode -> {
-
-
-
-
             try
             {
                 String textToMap = sourceCode.sourceName;
+                String codeToMap = sourceCode.sourceCode;
 
                 SourceCode fieldMap = new SourceCode();
                 SourceCode intelMap = new SourceCode();
@@ -166,30 +123,14 @@ public class ImportData
                  */
                 boolean positiveStatement = (settings.posTerms.contains(textToMap.toLowerCase()));
                 boolean negativeStatement = (settings.negTerms.contains(textToMap.toLowerCase()));
+                boolean empties = (settings.empties.contains(textToMap.toLowerCase()) || settings.empties.contains(codeToMap.toLowerCase()));
                 boolean containsNumbers = (StringUtils.isNumeric(textToMap) || (textToMap.startsWith("-") && StringUtils.isNumeric(textToMap.split("-")[1])));
-                boolean mapField = ( containsNumbers || positiveStatement || negativeStatement );
-
-                doMapping(fieldMap, settings, globalMappingList, fieldMap.fieldDescription);
+                boolean mapField = ( containsNumbers || positiveStatement || negativeStatement || empties);
 
                 if (!mapField)
-                {
-                    doMapping(sourceCode, settings, globalMappingList, sourceCode.sourceName);
-
-//                Set<String> nouns = check.getNoun(fieldMap.sourceName);
-//
-//                StringBuilder toUse = new StringBuilder(sourceCode.sourceName + " ");
-//
-//                for (String noun : nouns)
-//                {
-//                    toUse.append(noun).append(" ");
-//                }
-//                textToMap = toUse.toString();
-//                intelMap.setUsedCheat(true);
-//
-//                doMapping(intelMap, settings, globalMappingList, textToMap);
-                }
-
-
+                    doMapping(sourceCode, settings, globalMappingList,  sourceCode.sourceName);
+                else
+                    doMapping(sourceCode, settings, globalMappingList,  sourceCode.fieldDescription);
             }
             catch (Exception e)
             {
@@ -202,11 +143,19 @@ public class ImportData
         for (CodeMapping map : globalMappingList)
         {
             if (map.matchScore >= settings.threshold)
-                out.write(map);
+            {
+                primary.write(map);
+            }
+
+            for (CodeMapping seconadaryConcept: map.otherConcepts)
+            {
+                if (seconadaryConcept.matchScore >= settings.secondaryThreshold)
+                    secondary.write(seconadaryConcept);
+            }
         }
     }
 
-    public void doMapping(SourceCode sourceCode, ImportSettings settings, List<CodeMapping> globalMappingList, String textToUse)
+    public void doMapping(SourceCode sourceCode, ImportSettings settings, List<CodeMapping> globalMappingList,  String textToUse)
     {
         CodeMapping codeMapping = new CodeMapping(sourceCode);
 
@@ -215,29 +164,51 @@ public class ImportData
 
         if (concepts.size() > 0)
         {
-            codeMapping.targetConcepts.add(concepts.get(0).concept);
-            codeMapping.matchScore = concepts.get(0).matchScore;
+            int count=0;
+            for (ScoredConcept current: concepts)
+            {
+                if (count==0)
+                {
+                    codeMapping.targetConcepts.add(current.concept);
+                    codeMapping.matchScore = current.matchScore;
+                    codeMapping.comment = "";
+                    codeMapping.mappingStatus = MappingStatus.UNCHECKED;
+
+                    if (sourceCode.sourceAutoAssignedConceptIds.size() == 1 && concepts.size() > 0)
+                    {
+                        codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED_TO_1;
+                    }
+                    else if (sourceCode.sourceAutoAssignedConceptIds.size() > 1 && concepts.size() > 0)
+                    {
+                        codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED;
+                    }
+                }
+                else
+                {
+                    CodeMapping secondaryMap = new CodeMapping(sourceCode);
+                    secondaryMap.targetConcepts.add(current.concept);
+                    secondaryMap.matchScore = current.matchScore;
+                    secondaryMap.mappingStatus = MappingStatus.AUTO_MAPPED;
+                    secondaryMap.comment = "";
+
+                    codeMapping.otherConcepts.add(secondaryMap);
+                }
+
+                count++;
+            }
         }
         else
         {
             codeMapping.matchScore = 0;
         }
-        codeMapping.comment = "";
-        codeMapping.mappingStatus = MappingStatus.UNCHECKED;
 
-        if (sourceCode.sourceAutoAssignedConceptIds.size() == 1 && concepts.size() > 0)
-        {
-            codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED_TO_1;
-        }
-        else if (sourceCode.sourceAutoAssignedConceptIds.size() > 1 && concepts.size() > 0)
-        {
-            codeMapping.mappingStatus = MappingStatus.AUTO_MAPPED;
-        }
         synchronized (globalMappingList)
         {
             globalMappingList.add(codeMapping);
         }
+
     }
+
     public void copySoureCode(SourceCode toBeCopied, SourceCode copiedTo)
     {
         copiedTo.setFieldDescription(toBeCopied.getFieldDescription());
@@ -265,12 +236,12 @@ public class ImportData
         /**
          * The full path to the csv file containing the source code information
          */
-        public String sourceFile = "/Users/svzpq/The University of Nottingham/TDCC - ATLAS - ATLAS/ALSPAC/Data Mapping/ALSPAC small copy.csv";
+        public String sourceFile = null;
 
         /**
-         * The full path to where the output csv file will be written
+         * The full path to where the output files will be written
          */
-        public String mappingFile = "/Users/svzpq/Downloads/Usagi-master/output.csv";
+        public String outputDir = null;
 
         /**
          * The domain to which the search should be restricted. Set to null if not restricting by domain
@@ -318,8 +289,13 @@ public class ImportData
          */
         public List<String> additionalInfoColumns = new ArrayList<String>();
 
+        /**
+         * THe positive, negative and empties represent the values that may represent a value field, such as 'Yes, Y, 1' or "No, N, 1' If these are preesnt
+         * then the usagi will map the column name instead
+         */
         public List<String> posTerms = new ArrayList<String>();
         public List<String> negTerms = new ArrayList<String>();
+        public List<String> empties = new ArrayList<String>();
 
         /**
          * Include names of source concepts that map to standard concepts in the search?
@@ -331,7 +307,19 @@ public class ImportData
          */
         public double threshold = 0.7;
 
+        /**
+         * Threshold to accept a secondary result
+         */
+        public double secondaryThreshold = 0.2;
+
+        /**
+         * The ID of the column, usually the column name
+         */
         public String fieldID;
+
+        /**
+         * The description of the column name
+         */
 
         public String fieldDesc;
 

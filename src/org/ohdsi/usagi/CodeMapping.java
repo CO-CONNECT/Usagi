@@ -33,6 +33,7 @@ public class CodeMapping {
 	public double			matchScore;
 	public MappingStatus	mappingStatus;
 	public List<Concept>	targetConcepts	= new ArrayList<Concept>(1);
+	public List<CodeMapping>	otherConcepts	= new ArrayList<CodeMapping>();
 	public String			comment;
 
 	public CodeMapping(SourceCode sourceCode) {
