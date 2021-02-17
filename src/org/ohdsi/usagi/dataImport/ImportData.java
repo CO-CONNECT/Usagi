@@ -141,7 +141,7 @@ public class ImportData
         forkJoinPool.shutdown();
 
         for (CodeMapping map : globalMappingList)
-        {
+            {
             if (map.matchScore >= settings.threshold)
             {
                 primary.write(map);
@@ -153,6 +153,10 @@ public class ImportData
                     secondary.write(seconadaryConcept);
             }
         }
+
+          primary.close();
+          secondary.close();
+
     }
 
     public void doMapping(SourceCode sourceCode, ImportSettings settings, List<CodeMapping> globalMappingList,  String textToUse)
